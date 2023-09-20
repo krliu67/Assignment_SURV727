@@ -1,0 +1,178 @@
+---
+title: "Assignment 1"
+author: "Kangrui Liu"
+date: "`r Sys.Date()`"
+output:  pdf_document
+number_sections: yes
+fontsize: 10pt
+---
+```{r, include=FALSE}
+options(tinytex.verbose = TRUE)
+```
+
+# Git and GitHub
+## 1) Provide the link to the GitHub repo that you used to practice git from Week 1.
+* <https://github.com/krliu67/Liu-a1>
+
+# Reading Data
+## 2) Read in the .dta version and store in an object called angell_stata.
+```{r}
+library(haven)
+angell_stata <- read_dta("angell.dta")
+```
+## 3) Read in the .txt version and store it in an object called angell_txt.
+```{r}
+angell_txt <- read.table("angell.txt")
+```
+## 4) What are the differences between angell_stata and angell_txt? Are there differences in the classes of the individual columns?
+```{r}
+print(sapply(angell_stata, class))
+print(sapply(angell_txt, class))
+```
+* The column name of two data sets are different. There are differences between the classes of columns, which are numeric and character.
+
+## 5) Make any updates necessary so that angell_txt is the same as angell_stata.
+```{r}
+library(plyr)
+angell_txt <- plyr::rename(angell_txt, c("V1"="city","V2"="morint","V3"="ethhet","V4"="geomob","V5"="region"))
+print(class(angell_stata) == class(angell_txt))
+library(dplyr)
+angell_txt <- as_tibble(angell_txt)
+print(class(angell_stata) == class(angell_txt))
+```
+* The column names of two data are different and the classes of two data are also different, so I alter the column name of angell_txt and convert its type to which angell_stata is.
+
+## 6) Describe the Ethnic Heterogeneity variable. Use descriptive statistics such as mean, median, standard deviation, etc. How does it differ by region?
+```{r}
+t1 <- aggregate(ethhet ~ region, angell_stata, FUN = mean)
+t2 <- aggregate(ethhet ~ region, angell_stata, FUN = sd)
+t3 <- aggregate(ethhet ~ region, angell_stata, FUN = median)
+t4 <- merge(t1, t2, by = "region")
+rm(t1,t2)
+p6 <- merge(t3, t4, by = "region")
+rm(t3,t4)
+plyr::rename(p6, c("ethhet"="mean","ethhet.x"="sd","ethhet.y"="median"))
+rm(p6)
+```
+* As from the table, S region has highest mean, sd and median number, whereas W region has the least mean, sd and median number. 
+
+# Describing Data
+## 7) Install the “MASS” package, load the package. Then, load the Boston dataset.
+```{r}
+# install.packages('MASS')
+library(MASS)
+data(Boston)
+```
+## 8) What is the type of the Boston object?
+```{r}
+typeof(Boston)
+```
+* The type of Boston object is "list".
+
+## 9) What is the class of the Boston object?
+```{r}
+class(Boston)
+```
+* The class of Boston object is "data.frame".
+
+## 10) How many of the suburbs in the Boston data set bound the Charles river?
+```{r}
+#print(sapply(Boston, class))
+sum(Boston$chas == 1, na.rm = TRUE) # filter
+```
+* There are 35 suburbs in the Boston data set bound the Charles river.
+
+## 11) Do any of the suburbs of Boston appear to have particularly high crime rates? Tax rates? Pupil-teacher ratios? Comment on the range of each variable.
+```{r}
+c(min(Boston$crim),max(Boston$crim))
+c(min(Boston$tax),max(Boston$tax))
+c(min(Boston$ptratio),max(Boston$ptratio))
+```
+* The range of crime rates in Boston is $[0.00632,88.97620]$, Tax rates is $[187,711]$, and Pupil-teacher ratios is $[12.6,22.0]$.
+
+## 12) Describe the distribution of pupil-teacher ratio among the towns in this data set that have a per capita crime rate larger than 1. How does it differ from towns that have a per capita crime rate smaller than 1?
+```{r}
+bos1 <- subset(Boston, Boston$crim > 1)
+bos2 <- subset(Boston, Boston$crim <= 1)
+layout(matrix(c(1, 2), nrow = 1, ncol = 2, byrow = TRUE))
+hist(bos1$ptratio, main="Ptratio in High Crime Towns", xlab="Pupil-Teacher Ratio", col="skyblue")
+hist(bos2$ptratio, main="Ptratio in Low Crime Towns", xlab="Pupil-Teacher Ratio", col="salmon")
+```
+```{r}
+layout(matrix(c(1, 2), nrow = 1, ncol = 2, byrow = TRUE))
+boxplot(bos1$ptratio, main="Ptratio in High Crime Towns", col="skyblue")
+boxplot(bos2$ptratio, main="Ptratio in Low Crime Towns", col="salmon")
+```
+* Observing from the above graphs, the distribution of pupil-teacher ratio which has a per capita crime rate larger than 1 is dense, gathering in 20, and 2 of 4 extreme points are less than 19 and the rest outliers are larger than 20. However, that have less than 1 per capita crime rate is more chaos, separating from almost 14 to 22, and only 2 outliers are less than 14.
+
+
+```{r}
+summary(bos1)
+```
+```{r}
+summary(bos2)
+```
+
+# Writing Functions
+## 13) Write a function that calculates 95% confidence intervals for a point estimate. The function should be called my_CI. When called with my_CI(2, 0.2), the function should print out “The 95% CI upper bound of point estimate 2 with standard error 0.2 is 2.392. The lower bound is 1.608.”
+```{r}
+my_CI <- function(point_estimate, se){
+  lower_bound <- point_estimate - 1.96 * se
+  upper_bound <- point_estimate + 1.96 * se
+  paste0("The 95 percent CI upper bound of point estimate 2 with standard error 0.2 is ",upper_bound,". The lower bound is ",lower_bound,".")
+}
+my_CI(2, 0.2)
+```
+## 14) Create a new function called my_CI2 that does that same thing as the my_CI function but outputs a vector of length 2 with the lower and upper bound of the confidence interval instead of printing out the text. Use this to find the 95% confidence interval for a point estimate of 0 and standard error 0.4.
+```{r}
+my_CI2 <- function(point_estimate, se){
+  lower_bound <- point_estimate - 1.96 * se
+  upper_bound <- point_estimate + 1.96 * se
+  c(lower_bound,upper_bound)
+}
+my_CI2(0,0.4)
+```
+- The 95% confidence interval for a point estimate of 0 and standard error 0.4 is $[-0.784,0.784]$.\
+
+## 15) Update the my_CI2 function to take any confidence level instead of only 95%. Call the new function my_CI3. You should add an argument to your function for confidence level.
+```{r}
+my_CI3 <- function(point_estimate, se, alpha){
+  a <- 1 - alpha  # 1 - alpha
+  z <- qnorm(1 - a/2)  
+  lower_bound <- point_estimate - z * se
+  upper_bound <- point_estimate + z * se
+  c(lower_bound,upper_bound)
+}
+my_CI3(0,0.4,0.9)# test with a 90 percent confidence interval
+```
+## 16) Without hardcoding any numbers in the code, find a 99 percent confidence interval for Ethnic Heterogeneity in the Angell dataset. Find the standard error by  dividing the standard deviation by the square root of the sample size.\
+```{r}
+mean_eth <- mean(angell_stata$ethhet)
+std_eth <- sd(angell_stata$ethhet)/sqrt(nrow(angell_stata))
+my_CI_eth <- function(point_estimate, se, alpha){
+  a <- 1 - alpha  # 1 - alpha
+  z <- qnorm(1 - a/2)  
+  lower_bound <- point_estimate - z * se
+  upper_bound <- point_estimate + z * se
+  c(lower_bound,upper_bound)
+}
+my_CI_eth(mean_eth,std_eth,0.99)
+```
+- The 99% confidence interval for Ethnic Heterogeneity is $[23.35425,39.38993]$.\
+
+## 17) Write a function that you can apply to the Angell dataset to get 95% confidence intervals. The function should take one argument: a vector. Use if-else statements to output NA and avoid error messages if the column in the data frame is not numeric or logical.
+```{r}
+my_CI4 <- function(input_vector){
+  if(!is.numeric(input_vector) && !is.logical(input_vector)) {
+    return(NA)
+  }
+  mean_temp <- mean(input_vector)
+  std_temp <- sd(input_vector)/sqrt(length(input_vector))
+  a <- 1 - 0.95  # 1 - alpha
+  z <- qnorm(1 - a/2)  
+  lower_bound <- mean_temp - z * std_temp
+  upper_bound <- mean_temp + z * std_temp
+  c(lower_bound,upper_bound)
+}
+lapply(angell_stata, my_CI4)
+```

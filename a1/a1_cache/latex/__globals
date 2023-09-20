@@ -1,0 +1,17 @@
+unnamed-chunk-1	options
+unnamed-chunk-2	library	read_dta
+unnamed-chunk-3	read.table
+unnamed-chunk-4	angell_stata	angell_txt	class	print	sapply
+unnamed-chunk-5	c	library	rename
+unnamed-chunk-6	$	angell_stata	mean	median	sd
+unnamed-chunk-7	data	library
+unnamed-chunk-8	Boston	typeof
+unnamed-chunk-9	Boston	class
+unnamed-chunk-10	$	==	Boston	sum
+unnamed-chunk-11	$	Boston	c	max	min
+unnamed-chunk-12	$	<=	>	Boston	c	layout	matrix	max	plot	subset
+unnamed-chunk-13	paste0
+unnamed-chunk-14	c
+unnamed-chunk-15	c	qnorm
+unnamed-chunk-16	$	angell_stata	c	mean	nrow	qnorm	sd	sqrt
+unnamed-chunk-17	!	$	&&	angell_stata	c	if	is.logical	is.numeric	length	mean	qnorm	return	sd	sqrt
