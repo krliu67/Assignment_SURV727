@@ -1,0 +1,393 @@
+---
+title: "Assignment 2"
+author: "Kangrui Liu"
+date: "'r Sys.Date()'"
+output: pdf_document
+---
+
+You may work in pairs or individually for this assignment. Make sure you join a group in Canvas if you are working in pairs. Turn in this assignment as an HTML or PDF file to ELMS. Make sure to include the R Markdown or Quarto file that was used to generate it.
+
+```{r}
+#| message = FALSE
+library(tidyverse)
+library(gtrendsR)
+library(censusapi)
+library(dplyr)
+```
+
+In this assignment, you will pull from APIs to get data from various data sources and use your data wrangling skills to use them all together. You should turn in a report in PDF or HTML format that addresses all of the questions in this assignment, and describes the data that you pulled and analyzed. You do not need to include full introduction and conclusion sections like a full report, but you should make sure to answer the questions in paragraph form, and include all relevant tables and graphics.
+
+Whenever possible, use piping and `dplyr`. Avoid hard-coding any numbers within the report as much as possible.
+
+## Pulling from APIs
+
+Our first data source is the Google Trends API. Suppose we are interested in the search trends for `crime` and `loans` in Illinois in the year 2020. We could find this using the following code:
+
+```{r}
+res <- gtrends(c("crime", "loans"), 
+               geo = "US-CA",
+               time = "2021-01-01 2021-12-31", 
+               low_search_volume = TRUE)
+plot(res)
+```
+
+Answer the following questions for the keywords "crime" and "loans".
+
+-   Find the mean, median and variance of the search hits for the keywords.
+```{r}
+res$interest_over_time %>%
+  group_by(keyword) %>%
+  summarize(mean_hits=mean(hits), median_hits=median(hits), var_hits=var(hits))
+```
+
+-   Which cities (locations) have the highest search frequency for `loans`? Note that there might be multiple rows for each city if there were hits for both "crime" and "loans" in that city. It might be easier to answer this question if we had the search hits info for both search terms in two separate variables. That is, each row would represent a unique city.
+```{r}
+res_city <- spread(na.omit(res$interest_by_city), key = keyword, value = hits)
+
+res_city <- data.frame(
+  location = res_city$location,
+  geo = res_city$geo,
+  gprop = res_city$gprop,
+  crime = ifelse(is.na(res_city$crime), 0, res_city$crime),
+  loans = ifelse(is.na(res_city$loans), 0, res_city$loans),
+  stringsAsFactors = FALSE
+)
+
+head(res_city)
+
+res_city %>% subset(loans==max(res_city$loans))
+```
+-   Is there a relationship between the search intensities between the two keywords we used?
+```{r}
+res_city$loans <- as.numeric(res_city$loans)
+cor(res_city$crime, res_city$loans)
+```
+
+Repeat the above for keywords related to covid. Make sure you use multiple keywords like we did above. Try several different combinations and think carefully about words that might make sense within this context.
+
+Answer the following questions for the keywords "covid" and "shooting".
+```{r}
+res1 <- gtrends(c("covid", "shooting"), 
+               geo = "US-CA",
+               time = "2021-01-01 2021-12-31", 
+               low_search_volume = TRUE)
+plot(res1)
+```
+
+-   Find the mean, median and variance of the search hits for the keywords.
+```{r}
+res1$interest_over_time %>%
+  group_by(keyword) %>%
+  summarize(mean_hits=mean(hits), median_hits=median(hits), var_hits=var(hits))
+```
+
+-   Which cities (locations) have the highest search frequency for `loans`? Note that there might be multiple rows for each city if there were hits for both "crime" and "loans" in that city. It might be easier to answer this question if we had the search hits info for both search terms in two separate variables. That is, each row would represent a unique city.
+
+```{r}
+res1$interest_by_city <- na.omit(res1$interest_by_city)
+temp <- res1$interest_by_city %>% filter(keyword=="shooting")
+temp <- as.data.frame(table(temp$location)) %>% filter(Freq > 1)
+names <- temp[,1]
+rm(temp)
+
+if (length(names) != 0){
+  duplicate_rows <- res1$interest_by_city %>% filter(keyword=="shooting" & location==names)
+  temp <- subset(res1$interest_by_city, keyword=="covid")
+  res1$interest_by_city <- subset(res1$interest_by_city, keyword=="shooting" & location!=names)
+  duplicate_rows[1,2] = sum(duplicate_rows$hits)
+  duplicate_rows <- duplicate_rows[1,]
+  res1$interest_by_city <- rbind(res1$interest_by_city, duplicate_rows)
+  res1$interest_by_city <- rbind(res1$interest_by_city, temp)
+  rm(temp)
+  rm(duplicate_rows)
+}
+
+```
+
+
+```{r}
+res1_city <- spread(res1$interest_by_city, key = keyword, value = hits)
+
+res1_city <- data.frame(
+  location = res1_city$location,
+  geo = res1_city$geo,
+  gprop = res1_city$gprop,
+  covid = ifelse(is.na(res1_city$covid), 0, res1_city$covid),
+  shooting = ifelse(is.na(res1_city$shooting), 0, res1_city$shooting),
+  stringsAsFactors = FALSE
+)
+
+head(res1_city)
+
+res1_city %>% subset(shooting==max(shooting))
+res1_city %>% subset(covid==max(covid))
+```
+-   Is there a relationship between the search intensities between the two keywords we used?
+```{r}
+cor(res1_city$covid, res1_city$shooting)
+```
+Repeat the above for keywords related to covid. Make sure you use multiple keywords like we did above. Try several different combinations and think carefully about words that might make sense within this context.
+
+## Google Trends + ACS
+
+Now lets add another data set. The `censusapi` package provides a nice R interface for communicating with this API. However, before running queries we need an access key. This (easy) process can be completed here:
+
+<https://api.census.gov/data/key_signup.html>
+
+Once you have an access key, store this key in the `cs_key` object. We will use this object in all following API queries.
+
+```{r}
+cs_key <- "126febea0bcc10aa521d2e7555522aec8e759d91"
+```
+
+In the following, we request basic socio-demographic information (population, median age, median household income, income per capita) for cities and villages in the state of Illinois.
+
+```{r}
+acs_il <- getCensus(name = "acs/acs5",
+                    vintage = 2021, 
+                    vars = c("NAME", 
+                             "B01001_001E", 
+                             "B06002_001E", 
+                             "B19013_001E", 
+                             "B19301_001E"), 
+                    region = "place:*", 
+                    regionin = "state:17",
+                    key = cs_key)
+head(acs_il)
+```
+
+Convert values that represent missings to NAs.
+
+```{r}
+#| eval: false
+acs_il[acs_il == -666666666] <- NA
+```
+
+Now, it might be useful to rename the socio-demographic variables (`B01001_001E` etc.) in our data set and assign more meaningful names.
+
+```{r}
+#| eval: false
+acs_il <-
+  acs_il %>%
+  rename(pop = B01001_001E, 
+         age = B06002_001E, 
+         hh_income = B19013_001E, 
+         income = B19301_001E)
+acs_il %<>%
+  separate(NAME, c("location","state"), sep = ",") %T>% 
+  str(.)
+head(acs_il)
+```
+
+
+It seems like we could try to use this location information listed above to merge this data set with the Google Trends data. However, we first have to clean `NAME` so that it has the same structure as `location` in the search interest by city data. Add a new variable `location` to the ACS data that only includes city names.
+```{r}
+#Clean Data
+library(dplyr)
+library(magrittr)
+acs_ca <- getCensus(name = "acs/acs5",
+                    vintage = 2021, 
+                    vars = c("NAME", 
+                             "B01001_001E", 
+                             "B06002_001E", 
+                             "B19013_001E", 
+                             "B19301_001E"), 
+                    region = "place:*", 
+                    regionin = "state:06",
+                    key = cs_key)
+acs_ca[acs_ca == -666666666] <- NA
+acs_ca <-
+  acs_ca %>%
+  rename(pop = B01001_001E, 
+         age = B06002_001E, 
+         hh_income = B19013_001E, 
+         income = B19301_001E)
+acs_ca %<>%
+  separate(NAME, c("location","state"), sep = ",") %T>% 
+  str(.)
+head(acs_ca)
+```
+
+Answer the following questions with the "crime" and "loans" Google trends data and the ACS data.
+
+-   First, check how many cities don't appear in both data sets, i.e. cannot be matched. Then, create a new data set by joining the Google Trends and the ACS data. Keep only cities that appear in both data sets.
+```{r}
+library(stringr)
+for (x in 1:dim(acs_ca)[1]) {
+  temp <- acs_ca$location[x]
+  if (str_detect(acs_ca$location[x],"CDP") == TRUE){
+      temp <- gsub("CDP",'',temp)
+  }
+  if (str_detect(acs_ca$location[x],"city") == TRUE){
+      temp <- gsub("city",'',temp)
+  }
+  temp <- trimws(temp)
+  acs_ca$location[x] <- temp
+}
+rm(temp)
+common_cities <- intersect(res1_city$location, acs_ca$location)
+temp1 <- res1_city[res1_city$location %in% common_cities,]
+temp2 <- acs_ca[acs_ca$location %in% common_cities,]
+temp2_dup_names <- as.data.frame(table(temp2$location)) %>% filter(Freq > 1)
+temp2_dup <- acs_ca[acs_ca$location %in% temp2_dup_names$Var1,]
+temp2 <- temp2[!(temp2$location %in% temp2_dup$location),]
+temp2_dup_names <- unique(temp2_dup$location)
+for (x in 1:length(temp2_dup_names)) {
+  temp_rows <- temp2_dup[temp2_dup$location %in% temp2_dup_names[x],]
+  temp_df <- data.frame(
+    place=temp_rows$place[1],
+    location=temp2_dup_names[x],
+    state=temp_rows$state[1],
+    pop=sum(temp_rows$pop),
+    age=(temp_rows$pop[1]*temp_rows$age[1]/sum(temp_rows$pop))+(temp_rows$pop[2]*temp_rows$age[2]/sum(temp_rows$pop)),
+    hh_income=(temp_rows$pop[1]*temp_rows$hh_income[1]/sum(temp_rows$pop))+(temp_rows$pop[2]*temp_rows$hh_income[2]/sum(temp_rows$pop)),
+    income=(temp_rows$pop[1]*temp_rows$income[1]/sum(temp_rows$pop))+(temp_rows$pop[2]*temp_rows$income[2]/sum(temp_rows$pop))
+  )
+  temp2 <- rbind(temp2,temp_df)
+}
+rm(temp_df)
+rm(temp_rows)
+rm(temp2_dup)
+
+merged_df <- cbind(temp1,temp2,by = "location")
+merged_df <- merged_df[, !colnames(merged_df) %in% "location.1"]
+
+rm(temp1)
+rm(temp2)
+```
+
+-   Compute the mean of the search popularity for both keywords for cities that have an above average median household income and for those that have an below average median household income. When building your pipe, start with creating the grouping variable and then proceed with the remaining tasks. What conclusions might you draw from this?
+```{r}
+merged_df[is.na(merged_df)] <- 0
+
+above_hh <- merged_df %>% 
+  filter(hh_income > mean(hh_income))%>% 
+  summarize(mean_covid_hits=mean(covid),mean_shooting_hits=mean(shooting))
+below_hh <- merged_df %>% 
+  filter(hh_income <= mean(hh_income))%>% 
+  summarize(mean_covid_hits=mean(covid), mean_shooting_hits=mean(shooting))
+
+above_hh;below_hh
+```
+
+-   Is there a relationship between the median household income and the search popularity of the Google trends terms? Describe the relationship and use a scatter plot with `qplot()`.
+```{r}
+library(ggplot2)
+p1 <- qplot(x=merged_df$hh_income,y=merged_df$covid)+
+  geom_point(color="red")
+p2 <- qplot(x=merged_df$hh_income,y=merged_df$shooting)+
+  geom_point(color="darkgreen")
+
+library(gridExtra)
+library(grid)
+grid.arrange(p1, p2, ncol = 2)
+```
+
+Repeat the above steps using the covid data and the ACS data.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+### Practise
+
+```{r}
+library(tidyverse)
+library(gtrendsR)
+library(censusapi)
+library(magrittr)
+library(dplyr) 
+```
+
+```{r}
+res <- gtrends(c("crime", "loans"), 
+               geo = "US-IL", 
+               time = "2022-01-01 2022-6-30", 
+               low_search_volume = TRUE)
+plot(res)
+```
+
+
+```{r}
+cs_key <- "126febea0bcc10aa521d2e7555522aec8e759d91"
+
+acs_ca <- getCensus(name = "acs/acs5",
+                    vintage = 2021, 
+                    vars = c("NAME", 
+                             "B01001_001E", 
+                             "B06002_001E", 
+                             "B19013_001E", 
+                             "B19301_001E"), 
+                    region = "place:*", 
+                    regionin = "state:17",
+                    key = cs_key)
+head(acs_ca)
+```
+
+
+```{r}
+# each row represent trend hits
+res_time <- as_tibble(res$interest_over_time)
+glimpse(res_time)
+```
+```{r}
+res_time %>% 
+  subset(date > 2022-01-20 ) %>% 
+  group_by(keyword) %>% 
+  summarize(sd_hits=sd(hits), mean_hits=mean(hits))
+res_time %>% 
+  filter(date > 2022-01-20 ) %>% 
+  group_by(keyword) %>% 
+  summarize(sd_hits=sd(hits), mean_hits=mean(hits))
+```
+```{r}
+res_time_w <- spread(res_time, key = keyword, value = hits)
+head(res_time_w)
+```
+```{r}
+res_time_w1 <- res_time_w %>% gather( key = "keyword", value = "hits", 6:7)
+head(res_time_w1)
+```
+```{r}
+res_time_w2 <- res_time_w
+res_time_w2 %<>%
+  separate(date, c("year","month","day"), sep = "-") %T>% 
+  str(.)
+head(res_time_w2)
+
+```
+```{r}
+res_time_w %>% subset(date >= 2022-02-01) %$% mean(crime)
+```
+
+```{r}
+# join
+
+```
+
+
