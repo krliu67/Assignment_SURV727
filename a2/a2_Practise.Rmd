@@ -1,0 +1,76 @@
+### Practise
+
+```{r}
+library(tidyverse)
+library(gtrendsR)
+library(censusapi)
+library(magrittr)
+library(dplyr) 
+```
+
+```{r}
+res <- gtrends(c("crime", "loans"), 
+               geo = "US-IL", 
+               time = "2022-01-01 2022-6-30", 
+               low_search_volume = TRUE)
+plot(res)
+```
+
+
+```{r}
+cs_key <- "126febea0bcc10aa521d2e7555522aec8e759d91"
+
+acs_ca <- getCensus(name = "acs/acs5",
+                    vintage = 2021, 
+                    vars = c("NAME", 
+                             "B01001_001E", 
+                             "B06002_001E", 
+                             "B19013_001E", 
+                             "B19301_001E"), 
+                    region = "place:*", 
+                    regionin = "state:17",
+                    key = cs_key)
+head(acs_ca)
+```
+
+
+```{r}
+# each row represent trend hits
+res_time <- as_tibble(res$interest_over_time)
+glimpse(res_time)
+```
+```{r}
+res_time %>% 
+  subset(date > 2022-01-20 ) %>% 
+  group_by(keyword) %>% 
+  summarize(sd_hits=sd(hits), mean_hits=mean(hits))
+res_time %>% 
+  filter(date > 2022-01-20 ) %>% 
+  group_by(keyword) %>% 
+  summarize(sd_hits=sd(hits), mean_hits=mean(hits))
+```
+```{r}
+res_time_w <- spread(res_time, key = keyword, value = hits)
+head(res_time_w)
+```
+```{r}
+res_time_w1 <- res_time_w %>% gather( key = "keyword", value = "hits", 6:7)
+head(res_time_w1)
+```
+```{r}
+res_time_w2 <- res_time_w
+res_time_w2 %<>%
+  separate(date, c("year","month","day"), sep = "-") %T>% 
+  str(.)
+head(res_time_w2)
+
+```
+```{r}
+res_time_w %>% subset(date >= 2022-02-01) %$% mean(crime)
+```
+
+```{r}
+# join
+
+```
+
