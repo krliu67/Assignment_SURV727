@@ -25,7 +25,7 @@ library(dplyr)
 
 # 2. Pulling from APIs
 
-## Our first data source is the Google Trends API. Suppose we are interested in the search trends for `crime` and `loans` in Illinois in the year 2020. We could find this using the following code:
+## Our first data source is the Google Trends API. Suppose we are interested in the search trends for `crime` and `loans` in Caifornia in the year 2021. We could find this using the following code:
 
 ```{r}
 res_ca <- gtrends(c("crime", "loans"), 
@@ -43,6 +43,7 @@ res_ca$interest_over_time %>%
   group_by(keyword) %>%
   summarize(mean_hits=mean(hits), median_hits=median(hits), var_hits=var(hits))
 ```
+- According to the table presented above, the mean, median and variance of `crime` are $69.26$, $68.00$ and $58.16$ separately. And, the mean, median and variance of `loans` are $63.98$, $63.50$ and $25.04$ separately.\
 
 ### Which cities (locations) have the highest search frequency for `loans`? Note that there might be multiple rows for each city if there were hits for both "crime" and "loans" in that city. It might be easier to answer this question if we had the search hits info for both search terms in two separate variables. That is, each row would represent a unique city.
 ```{r}
@@ -63,10 +64,13 @@ head(res_ca_city)
 
 res_ca_city %>% subset(loans==max(res_ca_city$loans))
 ```
+- 	Yosemite Lakes has the highest search frequency for `loans` in 2021 in California.\
+
 ### Is there a relationship between the search intensities between the two keywords we used?
 ```{r}
 cor(res_ca_city$crime, res_ca_city$loans)
 ```
+- The correlation index of `loans` and `crime` in 2021 in California is $-0.06$, which means two keywords are weak negative linear correlated.\
 
 ### Repeat the above for keywords related to covid. Make sure you use multiple keywords like we did above. Try several different combinations and think carefully about words that might make sense within this context.
 
@@ -85,8 +89,9 @@ res1_ca$interest_over_time %>%
   group_by(keyword) %>%
   summarize(mean_hits=mean(hits), median_hits=median(hits), var_hits=var(hits))
 ```
+- According to the table presented above, the mean, median and variance of `covid` are $39.67$, $36.00$ and $227.44$ separately. And, the mean, median and variance of `shooting` are $3.13$, $3.00$ and $1.88$ separately.\
 
-### Which cities (locations) have the highest search frequency for `loans`? Note that there might be multiple rows for each city if there were hits for both "crime" and "loans" in that city. It might be easier to answer this question if we had the search hits info for both search terms in two separate variables. That is, each row would represent a unique city.
+### Which cities (locations) have the highest search frequency for `covid` and `shooting`? Note that there might be multiple rows for each city if there were hits for both "crime" and "loans" in that city. It might be easier to answer this question if we had the search hits info for both search terms in two separate variables. That is, each row would represent a unique city.
 
 ```{r}
 # handle missing value
@@ -136,10 +141,14 @@ head(res1_ca_city)
 res1_ca_city %>% subset(shooting==max(shooting))
 res1_ca_city %>% subset(covid==max(covid))
 ```
+- 	Los Altos has the highest search frequency for `covid` in 2021 in California. And, Hughson has the highest search frequency for `shooting` in 2021 in California.\
+
+
 ### Is there a relationship between the search intensities between the two keywords we used?
 ```{r}
 cor(res1_ca_city$covid, res1_ca_city$shooting)
 ```
+- The correlation index of `covid` and `shooting` in 2021 in California is $-0.65$, which means two keywords are strong negative linear correlated.\
 
 # 3. Google Trends + ACS
 
@@ -220,6 +229,7 @@ acs_ca %<>%
   str(.)
 head(acs_ca)
 ```
+- I change the state to California, and transformed `NAME` into `location` and `state` by cutting comma.\
 
 ## Answer the following questions with the "crime" and "loans" Google trends data and the ACS data.
 
@@ -273,7 +283,10 @@ merged_df <- merged_df[, !colnames(merged_df) %in% "location.1"]
 
 rm(temp1)
 rm(temp2)
+
+head(merged_df)
 ```
+- Due there have "CDP" and "city" in `acs_ca$location`, the common cities we intend to find will be difficult, so I delete these two dirty words in`acs_ca$location`. Then we can find common cities in `acs_ca` and `res_ca_city` so that combining those cities to a new data.\
 
 ### Compute the mean of the search popularity for both keywords for cities that have an above average median household income and for those that have an below average median household income. When building your pipe, start with creating the grouping variable and then proceed with the remaining tasks. What conclusions might you draw from this?
 ```{r}
@@ -288,6 +301,7 @@ below_hh <- merged_df %>%
 
 above_hh;below_hh
 ```
+- There are 2 conclusions I draw from above tables. One is, In both subsets, the search frequency of `crime` is more than `loans`. Another is, Cities which have an below average median household income search both keywords more frequent than which have an above average median.\
 
 ### Is there a relationship between the median household income and the search popularity of the Google trends terms? Describe the relationship and use a scatter plot with `qplot()`.
 ```{r}
@@ -300,6 +314,9 @@ p2 <- qplot(x=merged_df$hh_income,y=merged_df$loans)+
 library(gridExtra)
 library(grid)
 grid.arrange(p1, p2, ncol = 2)
+
+cat("The correlation index of househould income and crime hits is", cor(merged_df$hh_income,merged_df$crime),".\n")
+cat("The correlation index of househould income and loans hits is", cor(merged_df$hh_income,merged_df$loans),".")
 ```
 
 ## Repeat the above steps using the covid and shooting data and the ACS data.
