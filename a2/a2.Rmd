@@ -161,7 +161,8 @@ cor(res1_ca_city$covid, res1_ca_city$shooting)
 ```{r}
 library(dplyr)
 library(magrittr)
-cs_key <- "126febea0bcc10aa521d2e7555522aec8e759d91"
+cs_key <- read.table("D:/suds/727/acs-key.txt")[1,1]
+
 ```
 
 ### In the following, we request basic socio-demographic information (population, median age, median household income, income per capita) for cities and villages in the state of Illinois.
