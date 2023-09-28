@@ -1,0 +1,22 @@
+unnamed-chunk-1	library
+unnamed-chunk-2	c	gtrends	plot
+unnamed-chunk-3	$	%>%	group_by	hits	keyword	mean	median	res_ca	summarize	var
+unnamed-chunk-4	$	$<-	%>%	[<-	==	as.numeric	data.frame	head	hits	ifelse	is.na	keyword	loans	max	na.omit	res_ca	spread	subset
+unnamed-chunk-5	$	cor	res_ca_city
+unnamed-chunk-6	c	gtrends	plot
+unnamed-chunk-7	$	%>%	group_by	hits	keyword	mean	median	res1_ca	summarize	var
+unnamed-chunk-8	!=	$	$<-	%>%	&	[<-	==	>	as.data.frame	filter	Freq	if	keyword	length	location	na.omit	rbind	rm	subset	sum	table
+unnamed-chunk-9	$	$<-	%>%	[<-	==	as.numeric	covid	data.frame	head	hits	ifelse	is.na	keyword	max	res1_ca	shooting	spread	subset
+unnamed-chunk-10	$	cor	res1_ca_city
+unnamed-chunk-11	library	read.table
+unnamed-chunk-12	c	cs_key	getCensus	head
+unnamed-chunk-13	[<-	==
+unnamed-chunk-14	%<>%	%>%	%T>%	.	B01001_001E	B06002_001E	B19013_001E	B19301_001E	c	head	NAME	rename	separate	str
+unnamed-chunk-15	%<>%	%>%	%T>%	.	[<-	==	B01001_001E	B06002_001E	B19013_001E	B19301_001E	c	cs_key	getCensus	head	NAME	rename	separate	str
+unnamed-chunk-16	$	$<-	[<-	==	dim	for	gsub	if	library	rm	str_detect	trimws
+unnamed-chunk-17	!	$	%>%	>	acs_ca	as.data.frame	cbind	colnames	data.frame	filter	for	Freq	head	intersect	length	rbind	res_ca_city	rm	sum	table	unique
+unnamed-chunk-18	%>%	[<-	<=	>	crime	filter	hh_income	is.na	loans	mean	summarize
+unnamed-chunk-19	$	cat	cor	geom_point	grid.arrange	library	merged_df	qplot
+unnamed-chunk-20	!	$	%>%	>	acs_ca	as.data.frame	cbind	colnames	data.frame	filter	for	Freq	intersect	length	rbind	res1_ca_city	rm	sum	table	unique
+unnamed-chunk-21	%>%	[<-	<=	>	covid	filter	hh_income	is.na	mean	shooting	summarize
+unnamed-chunk-22	$	geom_point	grid.arrange	library	merged_df1	qplot

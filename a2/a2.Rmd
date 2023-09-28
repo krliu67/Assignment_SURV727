@@ -1,13 +1,18 @@
 ---
 title: "Assignment 2"
 author: "Kangrui Liu"
-date: "9/23/2023"
+date: "9/28/2023"
 output: pdf_document
 ---
+```{r setup, include=FALSE, tidy=TRUE}
+knitr::opts_chunk$set(echo = TRUE,cache=FALSE, 
+                      autodep=TRUE, cache.comments=FALSE,
+                      message=FALSE, warning=FALSE, digits = 2,
+                      fig.width=5.5, fig.height=3)
+```
+#### You may work in pairs or individually for this assignment. Make sure you join a group in Canvas if you are working in pairs. Turn in this assignment as an HTML or PDF file to ELMS. Make sure to include the R Markdown or Quarto file that was used to generate it.
 
-## You may work in pairs or individually for this assignment. Make sure you join a group in Canvas if you are working in pairs. Turn in this assignment as an HTML or PDF file to ELMS. Make sure to include the R Markdown or Quarto file that was used to generate it.
-
-```{r}
+```{r,include=FALSE}
 #| message = FALSE
 library(tidyverse)
 library(gtrendsR)
@@ -15,17 +20,16 @@ library(censusapi)
 library(dplyr)
 ```
 
-## In this assignment, you will pull from APIs to get data from various data sources and use your data wrangling skills to use them all together. You should turn in a report in PDF or HTML format that addresses all of the questions in this assignment, and describes the data that you pulled and analyzed. You do not need to include full introduction and conclusion sections like a full report, but you should make sure to answer the questions in paragraph form, and include all relevant tables and graphics.
+#### In this assignment, you will pull from APIs to get data from various data sources and use your data wrangling skills to use them all together. You should turn in a report in PDF or HTML format that addresses all of the questions in this assignment, and describes the data that you pulled and analyzed. You do not need to include full introduction and conclusion sections like a full report, but you should make sure to answer the questions in paragraph form, and include all relevant tables and graphics.
 
-## Whenever possible, use piping and `dplyr`. Avoid hard-coding any numbers within the report as much as possible.
+### Whenever possible, use piping and `dplyr`. Avoid hard-coding any numbers within the report as much as possible.
 
 # 1. Git and GitHub
 ## Provide the link to the GitHub repo for Assignment2.
-* <https://github.com/krliu67/Assignment_SURV727/tree/main/a2> \
+* <https://github.com/krliu67/Assignment_SURV727/tree/main/a2> *
 
 # 2. Pulling from APIs
-
-## Our first data source is the Google Trends API. Suppose we are interested in the search trends for `crime` and `loans` in Caifornia in the year 2021. We could find this using the following code:
+### Our first data source is the Google Trends API. Suppose we are interested in the search trends for `crime` and `loans` in Caifornia in the year 2021. We could find this using the following code:
 
 ```{r}
 res_ca <- gtrends(c("crime", "loans"), 
@@ -33,32 +37,28 @@ res_ca <- gtrends(c("crime", "loans"),
                time = "2021-01-01 2021-12-31", 
                low_search_volume = TRUE)
 plot(res_ca)
+
 ```
 
-## Answer the following questions for the keywords "crime" and "loans".
+## 1) Answer the following questions for the keywords "crime" and "loans".
 
-### Find the mean, median and variance of the search hits for the keywords.
+### a) Find the mean, median and variance of the search hits for the keywords.
 ```{r}
-res_ca$interest_over_time %>%
+res_ca_mmv <- res_ca$interest_over_time %>%
   group_by(keyword) %>%
   summarize(mean_hits=mean(hits), median_hits=median(hits), var_hits=var(hits))
+res_ca_mmv
 ```
-- According to the table presented above, the mean, median and variance of `crime` are $69.26$, $68.00$ and $58.16$ separately. And, the mean, median and variance of `loans` are $63.98$, $63.50$ and $25.04$ separately.\
+- According to the table presented above, the mean, median and variance of `covid` are `r round(res_ca_mmv[1,2],2)`, `r round(res_ca_mmv[1,3],2)` and `r round(res_ca_mmv[1,4],2)` separately. And, the mean, median and variance of `shooting` are `r round(res_ca_mmv[2,2],2)`,`r round(res_ca_mmv[2,3],2)`and `r round(res_ca_mmv[2,4],2)` separately.
 
-### Which cities (locations) have the highest search frequency for `loans`? Note that there might be multiple rows for each city if there were hits for both "crime" and "loans" in that city. It might be easier to answer this question if we had the search hits info for both search terms in two separate variables. That is, each row would represent a unique city.
+### b) Which cities (locations) have the highest search frequency for `loans`? Note that there might be multiple rows for each city if there were hits for both "crime" and "loans" in that city. It might be easier to answer this question if we had the search hits info for both search terms in two separate variables. That is, each row would represent a unique city.
 ```{r}
 # handle missing value
 res_ca_city <- spread(na.omit(res_ca$interest_by_city), key = keyword, value = hits)
-
-res_ca_city <- data.frame(
-  location = res_ca_city$location,
-  geo = res_ca_city$geo,
-  gprop = res_ca_city$gprop,
-  # clean data, replace NA with 0
-  crime = ifelse(is.na(res_ca_city$crime), 0, res_ca_city$crime),
-  loans = ifelse(is.na(res_ca_city$loans), 0, res_ca_city$loans),
-  stringsAsFactors = FALSE
-)
+# prevent some data was loaded as other types
+res_ca_city$crime <- as.numeric(res_ca_city$crime)
+res_ca_city$loans <- as.numeric(res_ca_city$loans)
+res_ca_city[is.na(res_ca_city)] <- 0
 
 head(res_ca_city)
 
@@ -66,15 +66,16 @@ res_ca_city %>% subset(loans==max(res_ca_city$loans))
 ```
 - 	Yosemite Lakes has the highest search frequency for `loans` in 2021 in California.\
 
-### Is there a relationship between the search intensities between the two keywords we used?
+### c) Is there a relationship between the search intensities between the two keywords we used?
 ```{r}
-cor(res_ca_city$crime, res_ca_city$loans)
+cor_ca_city <- cor(res_ca_city$crime, res_ca_city$loans)
+cor_ca_city
 ```
-- The correlation index of `loans` and `crime` in 2021 in California is $-0.06$, which means two keywords are weak negative linear correlated.\
+- The correlation index of `loans` and `crime` in 2021 in California is `r round(cor_ca_city,2)`, which means two keywords are weak negative linear correlated.\
 
-### Repeat the above for keywords related to covid. Make sure you use multiple keywords like we did above. Try several different combinations and think carefully about words that might make sense within this context.
+### d) Repeat the above for keywords related to covid. Make sure you use multiple keywords like we did above. Try several different combinations and think carefully about words that might make sense within this context.
 
-## Answer the following questions for the keywords "covid" and "shooting".
+## 2. Answer the following questions for the keywords "covid" and "shooting".
 ```{r}
 res1_ca <- gtrends(c("covid", "shooting"), 
                geo = "US-CA",
@@ -83,15 +84,16 @@ res1_ca <- gtrends(c("covid", "shooting"),
 plot(res1_ca)
 ```
 
-### Find the mean, median and variance of the search hits for the keywords.
+### a) Find the mean, median and variance of the search hits for the keywords.
 ```{r}
-res1_ca$interest_over_time %>%
+res1_ca_mmv <- res1_ca$interest_over_time %>%
   group_by(keyword) %>%
   summarize(mean_hits=mean(hits), median_hits=median(hits), var_hits=var(hits))
+res1_ca_mmv
 ```
-- According to the table presented above, the mean, median and variance of `covid` are $39.67$, $36.00$ and $227.44$ separately. And, the mean, median and variance of `shooting` are $3.13$, $3.00$ and $1.88$ separately.\
+- According to the table presented above, the mean, median and variance of `covid` are `r round(res1_ca_mmv[1,2],2)`, `r round(res1_ca_mmv[1,3],2)` and `r round(res1_ca_mmv[1,4],2)` separately. And, the mean, median and variance of `shooting` are `r round(res1_ca_mmv[2,2],2)`, `r round(res1_ca_mmv[2,3],2)`and `r round(res1_ca_mmv[2,4],2)` separately.\
 
-### Which cities (locations) have the highest search frequency for `covid` and `shooting`? Note that there might be multiple rows for each city if there were hits for both "crime" and "loans" in that city. It might be easier to answer this question if we had the search hits info for both search terms in two separate variables. That is, each row would represent a unique city.
+### b) Which cities (locations) have the highest search frequency for `covid` and `shooting`? Note that there might be multiple rows for each city if there were hits for both "crime" and "loans" in that city. It might be easier to answer this question if we had the search hits info for both search terms in two separate variables. That is, each row would represent a unique city.
 
 ```{r}
 # handle missing value
@@ -110,7 +112,7 @@ if (length(names) != 0){
   temp <- subset(res1_ca$interest_by_city, keyword =="shooting")
   # keep the rows which keyword is  but city don't have multiple rows
   res1_ca$interest_by_city <- subset(res1_ca$interest_by_city, keyword=="covid" & location!=names)
-  # delete duplicate rows and add hits to one row for each city
+  # delete duplicate rows and add hits up to one row for each city
   duplicate_rows[1,2] = sum(duplicate_rows$hits)
   duplicate_rows <- duplicate_rows[1,]
   res1_ca$interest_by_city <- rbind(res1_ca$interest_by_city, duplicate_rows)
@@ -121,52 +123,37 @@ if (length(names) != 0){
 
 ```
 
-
 ```{r}
 # group by keyword
 res1_ca_city <- spread(res1_ca$interest_by_city, key = keyword, value = hits)
-
-res1_ca_city <- data.frame(
-  location = res1_ca_city$location,
-  geo = res1_ca_city$geo,
-  gprop = res1_ca_city$gprop,
-  # replace NA with 0
-  covid = ifelse(is.na(res1_ca_city$covid), 0, res1_ca_city$covid),
-  shooting = ifelse(is.na(res1_ca_city$shooting), 0, res1_ca_city$shooting),
-  stringsAsFactors = FALSE
-)
+res1_ca_city$covid <- as.numeric(res1_ca_city$covid)
+res1_ca_city$shooting <- as.numeric(res1_ca_city$shooting)
+res1_ca_city[is.na(res1_ca_city)] <- 0
 
 head(res1_ca_city)
 
 res1_ca_city %>% subset(shooting==max(shooting))
 res1_ca_city %>% subset(covid==max(covid))
 ```
-- 	Los Altos has the highest search frequency for `covid` in 2021 in California. And, Hughson has the highest search frequency for `shooting` in 2021 in California.\
-
-
-### Is there a relationship between the search intensities between the two keywords we used?
+- El Cerrito has the highest search frequency for `covid` in 2021 in California. And, Adelanto has the highest search frequency for `shooting` in 2021 in California.\
+### c) Is there a relationship between the search intensities between the two keywords we used?
 ```{r}
-cor(res1_ca_city$covid, res1_ca_city$shooting)
+cor1_ca_city <- cor(res1_ca_city$covid, res1_ca_city$shooting)
+cor1_ca_city
 ```
-- The correlation index of `covid` and `shooting` in 2021 in California is $-0.65$, which means two keywords are strong negative linear correlated.\
+- The correlation index of `covid` and `shooting` in 2021 in California is `r round(cor1_ca_city,2)``, which means two keywords are negative linear correlated.\
 
 # 3. Google Trends + ACS
-
 ## Now lets add another data set. The `censusapi` package provides a nice R interface for communicating with this API. However, before running queries we need an access key. This (easy) process can be completed here:
-
-<https://api.census.gov/data/key_signup.html>
+<https://api.census.gov/data/key_signup.html> \
 
 ## Once you have an access key, store this key in the `cs_key` object. We will use this object in all following API queries.
-
-```{r}
+```{r,results="hide"}
 library(dplyr)
 library(magrittr)
 cs_key <- read.table("D:/suds/727/acs-key.txt")[1,1]
-
 ```
-
 ### In the following, we request basic socio-demographic information (population, median age, median household income, income per capita) for cities and villages in the state of Illinois.
-
 ```{r}
 acs_il <- getCensus(name = "acs/acs5",
                     vintage = 2021, 
@@ -182,14 +169,11 @@ head(acs_il)
 ```
 
 ### Convert values that represent missings to NAs.
-
 ```{r}
 #| eval: false
 acs_il[acs_il == -666666666] <- NA
 ```
-
 ### Now, it might be useful to rename the socio-demographic variables (`B01001_001E` etc.) in our data set and assign more meaningful names.
-
 ```{r}
 #| eval: false
 acs_il <-
@@ -203,7 +187,6 @@ acs_il %<>%
   str(.)
 head(acs_il)
 ```
-
 ### It seems like we could try to use this location information listed above to merge this data set with the Google Trends data. However, we first have to clean `NAME` so that it has the same structure as `location` in the search interest by city data. Add a new variable `location` to the ACS data that only includes city names.
 ```{r}
 # Clean Data
@@ -232,9 +215,8 @@ head(acs_ca)
 ```
 - I change the state to California, and transformed `NAME` into `location` and `state` by cutting comma.\
 
-## Answer the following questions with the "crime" and "loans" Google trends data and the ACS data.
-
-### First, check how many cities don't appear in both data sets, i.e. cannot be matched. Then, create a new data set by joining the Google Trends and the ACS data. Keep only cities that appear in both data sets.
+## 1) Answer the following questions with the "crime" and "loans" Google trends data and the ACS data.
+### a) First, check how many cities don't appear in both data sets, i.e. cannot be matched. Then, create a new data set by joining the Google Trends and the ACS data. Keep only cities that appear in both data sets.
 ```{r}
 library(stringr)
 # clean data, if location contains CDP or city, delete 
@@ -287,9 +269,9 @@ rm(temp2)
 
 head(merged_df)
 ```
-- Due there have "CDP" and "city" in `acs_ca$location`, the common cities we intend to find will be difficult, so I delete these two dirty words in`acs_ca$location`. Then we can find common cities in `acs_ca` and `res_ca_city` so that combining those cities to a new data.\
+- Due there have "CDP" and "city" in `acs_ca$location`, the common cities we intend to find will be difficult, so I delete these two dirty words in`acs_ca$location`. Then we can find common cities in `acs_ca` and `res_ca_city` so that combining those cities to a new data. Considering that the `age`, `hh_income` and `income` are Relative numbers, so I do computations of summing two rows up by proportion each `pop` of row has. \
 
-### Compute the mean of the search popularity for both keywords for cities that have an above average median household income and for those that have an below average median household income. When building your pipe, start with creating the grouping variable and then proceed with the remaining tasks. What conclusions might you draw from this?
+### b) Compute the mean of the search popularity for both keywords for cities that have an above average median household income and for those that have an below average median household income. When building your pipe, start with creating the grouping variable and then proceed with the remaining tasks. What conclusions might you draw from this?
 ```{r}
 merged_df[is.na(merged_df)] <- 0
 
@@ -304,7 +286,7 @@ above_hh;below_hh
 ```
 - There are 2 conclusions I draw from above tables. One is, In both subsets, the search frequency of `crime` is more than `loans`. Another is, Cities which have an below average median household income search both keywords more frequent than which have an above average median.\
 
-### Is there a relationship between the median household income and the search popularity of the Google trends terms? Describe the relationship and use a scatter plot with `qplot()`.
+### c) Is there a relationship between the median household income and the search popularity of the Google trends terms? Describe the relationship and use a scatter plot with `qplot()`.
 ```{r}
 library(ggplot2)
 p1 <- qplot(x=merged_df$hh_income,y=merged_df$crime)+
@@ -316,12 +298,14 @@ library(gridExtra)
 library(grid)
 grid.arrange(p1, p2, ncol = 2)
 
-cat("The correlation index of househould income and crime hits is", cor(merged_df$hh_income,merged_df$crime),".\n")
-cat("The correlation index of househould income and loans hits is", cor(merged_df$hh_income,merged_df$loans),".")
+cor_hh_cr <- cor(merged_df$hh_income,merged_df$crime)
+cor_hh_lo <-cor(merged_df$hh_income,merged_df$loans)
+cor_hh_cr;cor_hh_lo
 ```
+- According to plots, I found the distribution of points are chaos, and I guess that there is no clear relationship between the median household income and the search popularity of the Google trends terms. Observed from data, the correlation index of househould income and crime hits is  `r round(cor_hh_cr,2)`. and the correlation index of househould income and loans hits is `r round(cor_hh_lo,2)`. In my view, both correlation index were close to $0.00$, which had weak relationships.  \
 
-## Repeat the above steps using the covid and shooting data and the ACS data.
-### First, check how many cities don't appear in both data sets, i.e. cannot be matched. Then, create a new data set by joining the Google Trends and the ACS data. Keep only cities that appear in both data sets.
+## 2. Repeat the above steps using the covid and shooting data and the ACS data.
+### a) First, check how many cities don't appear in both data sets, i.e. cannot be matched. Then, create a new data set by joining the Google Trends and the ACS data. Keep only cities that appear in both data sets.
 ```{r}
 # find common cities in res1_ca_city and acs_ca
 common_cities1 <- intersect(res1_ca_city$location, acs_ca$location)
@@ -356,7 +340,7 @@ rm(temp1)
 rm(temp2)
 ```
 
-### Compute the mean of the search popularity for both keywords for cities that have an above average median household income and for those that have an below average median household income. When building your pipe, start with creating the grouping variable and then proceed with the remaining tasks. What conclusions might you draw from this?
+### b) Compute the mean of the search popularity for both keywords for cities that have an above average median household income and for those that have an below average median household income. When building your pipe, start with creating the grouping variable and then proceed with the remaining tasks. What conclusions might you draw from this?
 ```{r}
 merged_df1[is.na(merged_df1)] <- 0
 
@@ -369,8 +353,9 @@ below_hh1 <- merged_df1 %>%
 
 above_hh1;below_hh1
 ```
+- Also, there are 2 conclusions I draw from above tables. A is, In both subsets, the search frequency of `covid` is more than `shooting`. B is, Cities which have below average median household income search `shooting` keyword more frequent than which have an above average median, whereas families which had more wealth paid more attentions to `covid` rather than `shooting`.
 
-### Is there a relationship between the median household income and the search popularity of the Google trends terms? Describe the relationship and use a scatter plot with `qplot()`.
+### c) Is there a relationship between the median household income and the search popularity of the Google trends terms? Describe the relationship and use a scatter plot with `qplot()`.
 ```{r}
 library(ggplot2)
 p3 <- qplot(x=merged_df1$hh_income,y=merged_df1$covid)+
@@ -381,4 +366,9 @@ p4 <- qplot(x=merged_df1$hh_income,y=merged_df1$shooting)+
 library(gridExtra)
 library(grid)
 grid.arrange(p3, p4, ncol = 2)
+
+cor1_hh_co <- cor(merged_df1$hh_income,merged_df1$covid)
+cor1_hh_sh <- cor(merged_df1$hh_income,merged_df1$shooting)
+cor1_hh_co;cor1_hh_sh
 ```
+- According to plots, I found the distribution of points are chaos, and I guess that there is no clear relationship between the median household income and the search popularity of the Google trends terms. According to number, the correlation index of househould income and covid hits is  `r round(cor1_hh_co,2)`. and the correlation index of househould income and shooting hits is `r round(cor1_hh_sh,2)`. In my view, both correlation index were close to $0.00$, which had weak relationships.
