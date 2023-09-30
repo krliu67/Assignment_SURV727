@@ -1,7 +1,7 @@
 ---
 title: "Assignment 2"
 author: "Kangrui Liu"
-date: "9/28/2023"
+date: "9/30/2023"
 output: pdf_document
 ---
 ```{r setup, include=FALSE, tidy=TRUE}
@@ -26,7 +26,7 @@ library(dplyr)
 
 # 1. Git and GitHub
 ## Provide the link to the GitHub repo for Assignment2.
-* <https://github.com/krliu67/Assignment_SURV727/tree/main/a2> *
+* <https://github.com/krliu67/Assignment_SURV727/tree/main/a2>
 
 # 2. Pulling from APIs
 ### Our first data source is the Google Trends API. Suppose we are interested in the search trends for `crime` and `loans` in Caifornia in the year 2021. We could find this using the following code:
@@ -135,7 +135,8 @@ head(res1_ca_city)
 res1_ca_city %>% subset(shooting==max(shooting))
 res1_ca_city %>% subset(covid==max(covid))
 ```
-- El Cerrito has the highest search frequency for `covid` in 2021 in California. And, Adelanto has the highest search frequency for `shooting` in 2021 in California.\
+- Los Altos has the highest search frequency for `covid` in 2021 in California. And, San Joaquin has the highest search frequency for `shooting` in 2021 in California.\
+
 ### c) Is there a relationship between the search intensities between the two keywords we used?
 ```{r}
 cor1_ca_city <- cor(res1_ca_city$covid, res1_ca_city$shooting)
@@ -302,7 +303,7 @@ cor_hh_cr <- cor(merged_df$hh_income,merged_df$crime)
 cor_hh_lo <-cor(merged_df$hh_income,merged_df$loans)
 cor_hh_cr;cor_hh_lo
 ```
-- According to plots, I found the distribution of points are chaos, and I guess that there is no clear relationship between the median household income and the search popularity of the Google trends terms. Observed from data, the correlation index of househould income and crime hits is  `r round(cor_hh_cr,2)`. and the correlation index of househould income and loans hits is `r round(cor_hh_lo,2)`. In my view, both correlation index were close to $0.00$, which had weak relationships.  \
+- According to plots, I found the distribution of points are chaos, and I guess that there is no clear relationship between the median household income and the search popularity of the Google trends terms. Observed from data, the correlation index of househould income and crime hits is  `r round(cor_hh_cr,2)`. and the correlation index of househould income and loans hits is `r round(cor_hh_lo,2)`. In my view, both correlation index were close to $0.00$, which had weak relationships. Plus, plus or minus sign means the correlation of two variables is positive or negative.  \
 
 ## 2. Repeat the above steps using the covid and shooting data and the ACS data.
 ### a) First, check how many cities don't appear in both data sets, i.e. cannot be matched. Then, create a new data set by joining the Google Trends and the ACS data. Keep only cities that appear in both data sets.
@@ -371,4 +372,4 @@ cor1_hh_co <- cor(merged_df1$hh_income,merged_df1$covid)
 cor1_hh_sh <- cor(merged_df1$hh_income,merged_df1$shooting)
 cor1_hh_co;cor1_hh_sh
 ```
-- According to plots, I found the distribution of points are chaos, and I guess that there is no clear relationship between the median household income and the search popularity of the Google trends terms. According to number, the correlation index of househould income and covid hits is  `r round(cor1_hh_co,2)`. and the correlation index of househould income and shooting hits is `r round(cor1_hh_sh,2)`. In my view, both correlation index were close to $0.00$, which had weak relationships.
+- According to plots, I found the distribution of points are chaos, and I guess that there is no clear relationship between the median household income and the search popularity of the Google trends terms. According to number, the correlation index of househould income and covid hits is  `r round(cor1_hh_co,2)`. and the correlation index of househould income and shooting hits is `r round(cor1_hh_sh,2)`. In my view, both correlation index were close to $0.00$, which had weak relationships. Plus, plus or minus sign means the correlation of two variables is positive or negative.
