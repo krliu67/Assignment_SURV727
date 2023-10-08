@@ -1,8 +1,10 @@
 ---
 title: "Assignment 3"
 author: "Kangrui Liu"
-date: "10/10/2023"
-output: pdf_document
+date: "`r Sys.Date()`"
+output: 
+  pdf_document: 
+    latex_engine: xelatex
 fontsize: 10pt
 number_sections: yes
 ---
@@ -31,7 +33,6 @@ As a first step, read in the html page as an R object. Extract the tables from t
 ```{r}
 link <- "https://en.wikipedia.org/wiki/Grand_Boulevard,_Chicago"
 paths_allowed(link)
-
 url <- read_html(link)
 ```
 
@@ -56,10 +57,10 @@ rm(place_names)
 links[dim(links)[1]+1,] <- c("https://en.wikipedia.org/wiki/Grand_Boulevard,_Chicago","Grand Boulevard"," Chicago")
 ```
 
-
 Extract the "Historical population" table from the list and save it as another object. You can use subsetting via `[[…]]` to extract pieces from a list. Print the result.
 
 You will see that the table needs some additional formatting. We only want rows and columns with actual values (I called the table object `pop`).
+
 ```{r}
 # scrape data
 tables <- data.frame()
@@ -120,13 +121,6 @@ rm(temp)
 ```
 
 Build a small loop to test whether you can build valid urls using the vector of places and pasting each element of it after `https://en.wikipedia.org/wiki/` in a for loop. Calling `url` shows the last url of this loop, which should be `https://en.wikipedia.org/wiki/Hyde_Park,_Chicago`.
-
-```{r}
-# for(i in places_east) {
-#   url <- ...
-#   }
-# url
-```
 
 Finally, extend the loop and add the code that is needed to grab the population tables from each page. Add columns to the original table `pops` using `cbind()`.
 
@@ -191,8 +185,6 @@ words %>%
   aggregate(word ~ links.place, FUN = max)
 ```
 
-
-
 ```{r}
 library(ggplot2)
 
@@ -203,8 +195,5 @@ words %>%
   ggplot(aes(n, word)) +
   geom_col() +
   labs(y = NULL)
-```
-```{r}
-
 ```
 
