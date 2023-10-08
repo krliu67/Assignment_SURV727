@@ -11,7 +11,9 @@ number_sections: yes
 
 You may work in pairs or individually for this assignment. Make sure you join a group in Canvas if you are working in pairs. Turn in this assignment as an HTML or PDF file to ELMS. Make sure to include the R Markdown or Quarto file that was used to generate it. Include the GitHub link for the repository containing these files.
 
-```{r}
+* <https://github.com/krliu67/Assignment_SURV727/tree/main/a3>
+
+```{r, message = FALSE}
 library(xml2)
 library(rvest)
 library(tidyverse)
@@ -55,6 +57,9 @@ rm(place_links)
 rm(place_names)
 # combine all links
 links[dim(links)[1]+1,] <- c("https://en.wikipedia.org/wiki/Grand_Boulevard,_Chicago","Grand Boulevard"," Chicago")
+
+trimws(links$city)
+head(links)
 ```
 
 Extract the "Historical population" table from the list and save it as another object. You can use subsetting via `[[…]]` to extract pieces from a list. Print the result.
@@ -84,19 +89,9 @@ names(tables)[2] <- "Pop"
 rm(url_temp)
 rm(table_temp)
 rm(html_temp)
+
+head(tables)
 ```
-
-
-## Expanding to More Pages
-
-That's it for this page. However, we may want to repeat this process for other community areas. The Wikipedia page https://en.wikipedia.org/wiki/Grand_Boulevard,\_Chicago has a section on "Places adjacent to Grand Boulevard, Chicago" at the bottom. Can you find the corresponding table in the list of tables that you created earlier? Extract this table as a new object.
-
-Then, grab the community areas east of Grand Boulevard and save them as a character vector. Print the result.
-
-We want to use this list to create a loop that extracts the population tables from the Wikipedia pages of these places. To make this work and build valid urls, we need to replace empty spaces in the character vector with underscores. This can be done with `gsub()`, or by hand. The resulting vector should look like this: "Oakland,\_Chicago" "Kenwood,\_Chicago" "Hyde_Park,\_Chicago"
-
-To prepare the loop, we also want to copy our `pop` table and rename it as `pops`. In the loop, we append this table by adding columns from the other community areas.
-
 
 ```{r}
 # clean data, turn char to number
@@ -118,6 +113,24 @@ for (i in 1:dim(tables)[1]) {
   tables$Changes[i] <- temp
 }
 rm(temp)
+
+tables$Changes <- as.numeric(tables$Changes)
+tables$Pop <- as.numeric(tables$Pop)
+head(tables)
+```
+
+## Expanding to More Pages
+
+That's it for this page. However, we may want to repeat this process for other community areas. The Wikipedia page https://en.wikipedia.org/wiki/Grand_Boulevard,\_Chicago has a section on "Places adjacent to Grand Boulevard, Chicago" at the bottom. Can you find the corresponding table in the list of tables that you created earlier? Extract this table as a new object.
+
+Then, grab the community areas east of Grand Boulevard and save them as a character vector. Print the result.
+
+We want to use this list to create a loop that extracts the population tables from the Wikipedia pages of these places. To make this work and build valid urls, we need to replace empty spaces in the character vector with underscores. This can be done with `gsub()`, or by hand. The resulting vector should look like this: "Oakland,\_Chicago" "Kenwood,\_Chicago" "Hyde_Park,\_Chicago"
+
+To prepare the loop, we also want to copy our `pop` table and rename it as `pops`. In the loop, we append this table by adding columns from the other community areas.
+
+```{r}
+# I actually do this part in my second R block.
 ```
 
 Build a small loop to test whether you can build valid urls using the vector of places and pasting each element of it after `https://en.wikipedia.org/wiki/` in a for loop. Calling `url` shows the last url of this loop, which should be `https://en.wikipedia.org/wiki/Hyde_Park,_Chicago`.
@@ -153,6 +166,9 @@ for (i in 1:dim(links)[1]){
 rm(url_temp)
 rm(desc_temp)
 rm(html_temp)
+
+trimws(links$desc)
+head(links)
 ```
 
 Using a similar loop as in the last section, grab the descriptions of the various communities areas. Make a tibble with two columns: the name of the location and the text describing the location.
@@ -162,7 +178,7 @@ texts <- as_tibble(data.frame(links$place,links$desc))
 
 Let's clean the data using `tidytext`. If you have trouble with this section, see the example shown in <https://www.tidytextmining.com/tidytext.html>
 
-```{r}
+```{r, message = FALSE}
 library(tidytext)
 library(tm)
 stop_words <- stopwords("en")
@@ -176,14 +192,19 @@ words <- texts %>%
 words <- words %>%
   filter(!(word %in% stop_words))
 
-max(words$word)
+head(texts)
+
+words %>%
+  count(word, sort = TRUE)
 ```
+- "chicago" and "south" are the most common words used overall.
 
 Plot the most common words within each location. What are some of the similarities between the locations? What are some of the differences?
 ```{r}
 words %>%
   aggregate(word ~ links.place, FUN = max)
 ```
+- There are 5 places whose common words are related to direction.
 
 ```{r}
 library(ggplot2)
