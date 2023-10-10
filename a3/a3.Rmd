@@ -40,7 +40,7 @@ url <- read_html(link)
 
 ```{r}
 # find other links
-other_places <- html_element(url, xpath = '//*[contains(concat( " ", @class, " " ), concat( " ", "navbox", " " ))]')
+other_places <- html_element(url, xpath = '//*[contains(concat( " ", @class, " " ), concat( " ", "navbox-odd", " " ))]//table')
 # get links of other places
 place_links <- other_places %>% html_nodes("a") %>% html_attr("href")%>% data.frame()
 for (i in 1:dim(place_links)[1]) {
@@ -130,7 +130,16 @@ We want to use this list to create a loop that extracts the population tables fr
 To prepare the loop, we also want to copy our `pop` table and rename it as `pops`. In the loop, we append this table by adding columns from the other community areas.
 
 ```{r}
-# I actually do this part in my second R block.
+# I actually do this part in my second R block, but collect all places info.
+# filter get east places
+east <- other_places %>% html_table() %>% data.frame() %>% na.omit()
+east <- subset(east, !apply(is.na(east) | east == "", 1, all))
+east <- east[,-c(1,2)]
+east <- gsub(", Chicago","",east)
+east <- east %>% c("Grand Boulevard")
+
+east_tables <- subset(tables, Place %in% east)
+east_links <- subset(links, place %in% east)
 ```
 
 Build a small loop to test whether you can build valid urls using the vector of places and pasting each element of it after `https://en.wikipedia.org/wiki/` in a for loop. Calling `url` shows the last url of this loop, which should be `https://en.wikipedia.org/wiki/Hyde_Park,_Chicago`.
@@ -146,8 +155,8 @@ First, scrape just the text without any of the information in the margins or hea
 ```{r}
 # get description of each place
 # description <- description %>% paste(collapse = ' ')
-for (i in 1:dim(links)[1]){
-  url_temp <- read_html(links$link[i])
+for (i in 1:dim(east_links)[1]){
+  url_temp <- read_html(east_links$link[i])
   html_temp <- html_element(url_temp, xpath = '//p[(((count(preceding-sibling::*) + 1) = 6) and parent::*)]')
   if(length(html_temp) == 0){
     html_temp <- html_element(url_temp, xpath = '//p[(((count(preceding-sibling::*) + 1) = 7) and parent::*)]')
@@ -160,20 +169,20 @@ for (i in 1:dim(links)[1]){
   }
   desc_temp <- html_text(html_temp)
   desc_temp <- desc_temp %>% paste(collapse = ' ')
-  links$desc[i] <- desc_temp
+  east_links$desc[i] <- desc_temp
 }
 # remove temps
 rm(url_temp)
 rm(desc_temp)
 rm(html_temp)
 
-trimws(links$desc)
-head(links)
+trimws(east_links$desc)
+head(east_links)
 ```
 
 Using a similar loop as in the last section, grab the descriptions of the various communities areas. Make a tibble with two columns: the name of the location and the text describing the location.
 ```{r}
-texts <- as_tibble(data.frame(links$place,links$desc))
+texts <- as_tibble(data.frame(east_links$place,east_links$desc))
 ```
 
 Let's clean the data using `tidytext`. If you have trouble with this section, see the example shown in <https://www.tidytextmining.com/tidytext.html>
@@ -187,7 +196,7 @@ stop_words <- stopwords("en")
 Create tokens using `unnest_tokens`. Make sure the data is in one-token-per-row format. Remove any stop words within the data. What are the most common words used overall?
 ```{r}
 words <- texts %>%
-  unnest_tokens(word, links.desc) 
+  unnest_tokens(word, east_links.desc) 
 
 words <- words %>%
   filter(!(word %in% stop_words))
@@ -197,21 +206,28 @@ head(texts)
 words %>%
   count(word, sort = TRUE)
 ```
-- "chicago" and "south" are the most common words used overall.
+- "chicago" is the most common word used overall in east places.
 
 Plot the most common words within each location. What are some of the similarities between the locations? What are some of the differences?
 ```{r}
-words %>%
-  aggregate(word ~ links.place, FUN = max)
+words %>% table() %>% data.frame() %>% 
+  group_by(east_links.place) %>% 
+  filter(Freq == max(Freq)) %>%
+  ggplot(aes(x = east_links.place, y = Freq, fill = word)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Most Common Words", x = "Location", y = "Frequency") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
-- There are 5 places whose common words are related to direction.
+- The word "kenwood" appears 7 times in Kenwood's wiki, "area" appears 4 times in Oakland, and "south" appears 2 times in Hyde Park. However, there are 3 words appear 2 times in Grand Boulevard's wiki and they are the most common words in this place.
+- I found the similarities between each place are most of words are related to directions and places.
 
 ```{r}
 library(ggplot2)
 
 words %>%
   count(word, sort = TRUE) %>%
-  filter(n > 2) %>%
+  filter(n > 1) %>%
   mutate(word = reorder(word, n)) %>%
   ggplot(aes(n, word)) +
   geom_col() +
