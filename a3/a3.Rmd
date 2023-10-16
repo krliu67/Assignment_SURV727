@@ -21,6 +21,8 @@ library(jsonlite)
 library(robotstxt)
 library(RSocrata)
 library(dplyr)
+library(tidytext)
+library(tm)
 ```
 
 ## Web Scraping
@@ -188,8 +190,6 @@ texts <- as_tibble(data.frame(east_links$place,east_links$desc))
 Let's clean the data using `tidytext`. If you have trouble with this section, see the example shown in <https://www.tidytextmining.com/tidytext.html>
 
 ```{r, message = FALSE}
-library(tidytext)
-library(tm)
 stop_words <- stopwords("en")
 ```
 
@@ -205,6 +205,7 @@ head(texts)
 
 words %>%
   count(word, sort = TRUE)
+
 ```
 - "chicago" is the most common word used overall in east places.
 
@@ -219,7 +220,7 @@ words %>% table() %>% data.frame() %>%
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
-- The word "kenwood" appears 7 times in Kenwood's wiki, "area" appears 4 times in Oakland, and "south" appears 2 times in Hyde Park. However, there are 3 words appear 2 times in Grand Boulevard's wiki and they are the most common words in this place.
+- The word "kenwood" appears 7 times in Kenwood's wiki, "area" appears 4 times in Oakland, and "south" appears 2 times in Hyde Park. However, there are 3 words appear 2 times in Grand Boulevard's wiki and they are the most common words in this place.\
 - I found the similarities between each place are most of words are related to directions and places.
 
 ```{r}
@@ -233,4 +234,3 @@ words %>%
   geom_col() +
   labs(y = NULL)
 ```
-
