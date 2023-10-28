@@ -11,8 +11,7 @@ number_sections: yes
 
 This is an individual assignment. Turn in this assignment as an HTML or PDF file to ELMS. Make sure to include the R Markdown or Quarto file that was used to generate it. Include the GitHub link for the repository containing these files.
 
-Github Link <https://github.com/krliu67/Assignment_SURV727/tree/main/a4>
-
+**Github Link -->** <https://github.com/krliu67/Assignment_SURV727/tree/main/a4>
 ```{r}
 #| include: false 
 library(tidyverse)
@@ -35,7 +34,6 @@ project <- "surv-727-test-403117"
 ```
 
 We will connect to a public database, the Chicago crime database, which has data on crime in Chicago.
-
 ```{r}
 con <- dbConnect(
   bigrquery::bigquery(),
@@ -49,7 +47,6 @@ con
 We can look at the available tables in this database using `dbListTables`.
 
 **Note**: When you run this code, you will be sent to a browser and have to give Google permissions to Tidyverse API Packages. **Make sure you select all to give access or else your code will not run.**
-
 ```{r}
 dbListTables(con)
 ```
@@ -73,6 +70,7 @@ We can also use the `date` for grouping. Count the number of arrests grouped by 
 ```{sql connection=con}
 SELECT date, count(*) counts_date FROM crime WHERE date >= "2016-01-01 00:00:00" and date <= "2017-01-01 00:00:00" group by date;
 ```
+
 ```{r}
 query <- "SELECT date, count(*) counts_date FROM crime WHERE date >= '2016-01-01 00:00:00' and date <= '2017-01-01 00:00:00' group by date;"
 count_date_2016 <- dbGetQuery(con, query)
@@ -125,21 +123,20 @@ crime %>% filter(district == 11, date >= '2016-01-01 00:00:00' && date <= '2017-
 
 Count the number of arrests grouped by `primary_type` and `year`, still only for district 11. Arrange the result by `year`.
 ```{r}
-crime %>% filter(district == 11)%>% group_by(primary_type) %>% count(primary_type) %>% group_by(year)
+crime %>% filter(district == 11) %>% group_by(year, primary_type) %>%   summarize(arrest_count = n()) %>% arrange(year)
 ```
 
 Assign the results of the query above to a local R object.
 ```{r}
-
+year_primary <- crime %>% filter(district == 11) %>% group_by(year, primary_type) %>%   summarize(arrest_count = n()) %>% arrange(year) %>% data.frame()
 ```
 
 Confirm that you pulled the data to the local environment by displaying the first ten rows of the saved data set.
 ```{r}
-
+year_primary[c(1:10),]
 ```
 
 Close the connection.
-
 ```{r}
 dbDisconnect(con)
 ```
