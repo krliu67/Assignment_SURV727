@@ -57,54 +57,40 @@ Information on the \`crime\` table can be found here:
 
 Write a first query that counts the number of rows of the \`crime\` table in the year 2016. Use code chunks with {sql connection = con} in order to write SQL code within the document.
 ```{sql connection=con}
-SELECT count(*)
-FROM crime;
+SELECT count(*) count
+FROM crime
+WHERE year = 2016;
 ```
 
 Next, count the number of arrests grouped by `primary_type` in 2016. Note that is a somewhat similar task as above, with some adjustments on which rows should be considered. Sort the results, i.e. list the number of arrests in a descending order.
 ```{sql connection=con}
-SELECT primary_type, count(*) FROM crime group by primary_type;
+SELECT primary_type, count(*) count_pt FROM crime WHERE year = 2016 group by primary_type 
+ORDER BY count_pt DESC LIMIT 10;
 ```
 
 We can also use the `date` for grouping. Count the number of arrests grouped by hour of the day in 2016. You can extract the latter information from `date` via `EXTRACT(HOUR FROM date)`. Which time of the day is associated with the most arrests?
 ```{sql connection=con}
-SELECT date, count(*) counts_date FROM crime WHERE date >= "2016-01-01 00:00:00" and date <= "2017-01-01 00:00:00" group by date;
+SELECT EXTRACT(HOUR FROM date) hour, count(*) count_hour FROM crime WHERE year = 2016 group by hour 
+ORDER BY count_hour DESC LIMIT 10;
 ```
-
-```{r}
-query <- "SELECT date, count(*) counts_date FROM crime WHERE date >= '2016-01-01 00:00:00' and date <= '2017-01-01 00:00:00' group by date;"
-count_date_2016 <- dbGetQuery(con, query)
-count_date_2016$date <- as.character(count_date_2016$date)
-```
-
-```{r}
-count_date_2016 %<>%
-  separate(date, c("date","time"), sep = " ")
-
-count_date_2016 <- count_date_2016[,-1]
-
-count_date_2016 <- aggregate(counts_date ~ time, data = count_date_2016, sum)
-
-count_date_2016 %>% subset(counts_date==max(count_date_2016$counts_date))
-```
+* 12:00:00 - 12:59:59 has the most arrests.
 
 Focus only on `HOMICIDE` and count the number of arrests for this incident type, grouped by year. List the results in descending order.
 ```{sql connection=con}
-SELECT date, count(*) counts_date FROM crime WHERE primary_type = "HOMICIDE" GROUP BY date ORDER BY counts_date DESC;
+SELECT year, count(*) count_year FROM crime WHERE primary_type = "HOMICIDE" GROUP BY year 
+ORDER BY count_year DESC LIMIT 10;
 ```
 
 Find out which districts have the highest numbers of arrests in 2015 and 2016. That is, count the number of arrests in 2015 and 2016, grouped by year and district. List the results in descending order.
 ```{sql connection=con}
-SELECT district, count(*) counts_district FROM crime WHERE date >= "2015-01-01 00:00:00" and date <= "2017-01-01 00:00:00"  group by district order by counts_district DESC LIMIT 10;
+SELECT year, district, count(*) count_district FROM crime WHERE 2015<=year and year <= 2016 
+GROUP BY district,year ORDER BY count_district DESC LIMIT 10;
 ```
 
 Lets switch to writing queries from within R via the `DBI` package. Create a query object that counts the number of arrests grouped by `primary_type` of district 11 in year 2016. The results should be displayed in descending order.
-```{sql connection=con}
-SELECT primary_type, count(*) counts FROM crime WHERE date >= "2016-01-01 00:00:00" and date <= "2017-01-01 00:00:00" and district = 11 group by primary_type order by counts DESC LIMIT 10;
-```
-
 ```{r}
-query <- "SELECT primary_type, count(*) counts FROM crime WHERE date >= '2016-01-01 00:00:00' and date <= '2017-01-01 00:00:00' and district = 11 group by primary_type order by counts DESC LIMIT 10;"
+query <- "SELECT year, district, primary_type, count(*) count_pt FROM crime WHERE year = 2016 and 
+district = 11 GROUP BY primary_type,year,district ORDER BY count_pt DESC LIMIT 10;"
 ```
 Execute the query.
 ```{r}
@@ -118,17 +104,19 @@ crime <- tbl(con, "crime")
 
 Again, count the number of arrests grouped by `primary_type` of district 11 in year 2016, now using `dplyr` syntax.
 ```{r}
-crime %>% filter(district == 11, date >= '2016-01-01 00:00:00' && date <= '2017-01-01 00:00:00')%>% group_by(primary_type) %>% count(primary_type)
+crime %>% filter(district == 11, year == 2016)%>% group_by(primary_type) %>% count(primary_type)
 ```
 
 Count the number of arrests grouped by `primary_type` and `year`, still only for district 11. Arrange the result by `year`.
 ```{r}
-crime %>% filter(district == 11) %>% group_by(year, primary_type) %>%   summarize(arrest_count = n()) %>% arrange(year)
+crime %>% filter(district == 11) %>% group_by(year, primary_type) %>%
+  summarize(arrest_count = n()) %>% arrange(year)
 ```
 
 Assign the results of the query above to a local R object.
 ```{r}
-year_primary <- crime %>% filter(district == 11) %>% group_by(year, primary_type) %>%   summarize(arrest_count = n()) %>% arrange(year) %>% data.frame()
+year_primary <- crime %>% filter(district == 11) %>% group_by(year, primary_type) %>% 
+    summarize(arrest_count = n()) %>% arrange(year) %>% data.frame()
 ```
 
 Confirm that you pulled the data to the local environment by displaying the first ten rows of the saved data set.
